@@ -20,13 +20,15 @@ public class Banker {
 	 */
 	public Banker (int[] resources, int numberOfCustomers) {
 		// TODO: set the number of resources
-
+		this.numberOfResources=resources.length;
 		// TODO: set the number of customers
-
+		this.numberOfCustomers=numberOfCustomers;
 		// TODO: set the value of bank resources to available
-
+		this.available=resources;
 		// TODO: set the array size for maximum, allocation, and need
-
+		maximum =new int[numberOfCustomers][numberOfResources];
+		allocation =new int[numberOfCustomers][numberOfResources];
+		need = new int[numberOfCustomers][numberOfResources];
 	}
 
 	/**
@@ -36,6 +38,10 @@ public class Banker {
 	 */
 	public void setMaximumDemand(int customerIndex, int[] maximumDemand) {
 		// TODO: add customer, update maximum and need
+		for (int i =0; i<maximumDemand.length;i++) {
+			maximum[customerIndex][i]=maximumDemand[i];
+			need[customerIndex][i]=maximum[customerIndex][i]-allocation[customerIndex][i];
+		}
 
 	}
 
@@ -78,15 +84,38 @@ public class Banker {
 	 */
 	public synchronized boolean requestResources(int customerIndex, int[] request) {
 		// TODO: print the request
-		
-		// TODO: check if request larger than need
-		
-		// TODO: check if request larger than available
-		
+		System.out.printf("Customer %d requesting\n",customerIndex);
+		System.out.println(Arrays.toString(request));
+
+		for (int i=0;i<request.length;i++) {
+
+			// TODO: check if request larger than need
+			if (request[i]>need[customerIndex][i]) {
+				// System.out.println("More than allowed");
+				return false;
+			}
+			
+			// TODO: check if request larger than available
+			if (request[i]>available[i]) {
+				// System.out.println("More than available");
+				return false;
+			}
+		};
+
 		// TODO: check if the state is safe or not
-		
+		if (!checkSafe(customerIndex, request)){
+			// System.out.println("Deadlock preempted");
+			return false;
+		}
+
 		// TODO: if it is safe, allocate the resources to customer customerNumber
-		
+		for (int i=0;i<request.length;i++) {
+			available[i]-=request[i];
+			need[customerIndex][i]-=request[i];
+			allocation[customerIndex][i]+=request[i];
+			
+		};
+		// System.out.println("Safely allocated, available is - "+Arrays.toString(available));
 		return true;
 	}
 
@@ -97,9 +126,16 @@ public class Banker {
 	 */
 	public synchronized void releaseResources(int customerIndex, int[] release) {
 		// TODO: print the release
-		
+		System.out.printf("Customer %d releasing\n",customerIndex);
+		System.out.println(Arrays.toString(release));
+
 		// TODO: release the resources from customer customerNumber
-		
+		for (int i=0;i<release.length;i++) {
+			available[i]+=release[i];
+			allocation[customerIndex][i]-=release[i];
+			need[customerIndex][i]+=release[i];
+		};
+		// System.out.println("Available - "+Arrays.toString(available));
 
 	}
 
@@ -112,8 +148,61 @@ public class Banker {
 	 */
 	private synchronized boolean checkSafe(int customerIndex, int[] request) {
 		// TODO: check if the state is safe
+
+		// temp_avail = available - request;
+		int temp_avail[] = new int [numberOfResources];
+		for (int i=0; i<numberOfResources; i++) temp_avail[i]=available[i]-request[i];
+
+		// temp_need(customerNumber) = need - request;
+		int temp_need[][] = new int [numberOfCustomers][numberOfResources];
+		for (int p=0; p<numberOfCustomers; p++){
+			for (int i=0; i<numberOfResources; i++){
+				temp_need[p][i]=need[p][i];
+			}
+		}
+		for (int i=0; i<numberOfResources; i++) temp_need[customerIndex][i]=need[customerIndex][i]-request[i];
+
+		// temp_allocation(customerNumber) = allocation + request;
+		int temp_allocation[][] = new int [numberOfCustomers][numberOfResources];
+		for (int p=0; p<numberOfCustomers; p++){
+			for (int i=0; i<numberOfResources; i++){
+				temp_allocation[p][i]=allocation[p][i];
+			}
+		}
+		for (int i=0; i<numberOfResources; i++) temp_allocation[customerIndex][i]=allocation[customerIndex][i]+request[i];
 		
-		return true;
+		// work = temp_avail;
+		int work[] = new int [numberOfResources];
+		for (int i=0; i<numberOfResources; i++) work[i]=temp_avail[i];
+
+		//  finish(all) = false;
+		boolean finish[]= new boolean[numberOfCustomers];
+		for (int i=0; i<numberOfCustomers; i++) {
+			finish[i]=false;
+		};
+
+		// // rotational check
+		boolean possible=true;
+		while (possible) {
+			possible=false;
+			for (int p=0;p<numberOfCustomers;p++){
+				if (finish[p]==false){
+					int sum =0;
+					for (int i=0; i<numberOfResources; i++) {
+						if(temp_need[p][i]<=work[i]) {
+							sum++;
+						}
+					};
+					if (sum==numberOfResources) {
+						possible=true;
+						for (int i=0; i<numberOfResources; i++) work[i]+=temp_allocation[p][i];
+						finish[p]=true;
+					}
+				}
+			}
+		}
+		for(boolean b : finish) if(!b) return false;
+    	return true;
 	}
 
 	/**

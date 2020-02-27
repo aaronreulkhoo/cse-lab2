@@ -10,7 +10,7 @@ int main()
     char full_command[64] = {};
     char full_filename_answer[64] = {};
 
-    char command_1[] = "java TestBankQ2.java q2_";
+    char command_1[] = "java TestBankQ2 q2_";
     char command_2[] = ".txt > answer.txt";
     char filename_answer_p1[] = "answerq2_";
     char filename_answer_p2[] = ".txt";
